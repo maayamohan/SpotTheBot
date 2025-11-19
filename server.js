@@ -31,6 +31,7 @@ wss.on("connection", (ws) => {
 
         if (msg.type == "join-room") {
             const roomCode = msg.room;
+            const name = msg.name;
 
             if (!rooms.has(roomCode)) {
                 rooms.set(roomCode, new Set());
@@ -38,12 +39,13 @@ wss.on("connection", (ws) => {
 
             rooms.get(roomCode).add(ws);
             ws.room = roomCode;
+            ws.name = name;
 
             console.log(`Client joined room ${roomCode}`);
 
             broadcastToRoom(roomCode, {
                 type: "room-update",
-                message: "A new player has joined!",
+                message: `${name} has joined!`,
                 count: rooms.get(roomCode).size
             });
         }
@@ -60,7 +62,7 @@ wss.on("connection", (ws) => {
 
                 broadcastToRoom(ws.room, {
                     type: "room-update",
-                    message: "A player has left!",
+                    message: `${ws.name} has left.`,
                     count: rooms.get(ws.room).size
                 });
 

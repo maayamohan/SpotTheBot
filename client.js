@@ -7,6 +7,7 @@ ws.on("open", () => {
 
     ws.send(JSON.stringify({
         type: "join-room",
+        name: "Alice",
         room: "ABCD"
     }));
 });
