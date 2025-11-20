@@ -18,7 +18,6 @@ wss.on("connection", (ws) => {
     ws.room = null;
 
     ws.on("message", (data) => {
-        // console.log("Received: ", data.toString());
         let msg;
 
         try {
@@ -40,6 +39,7 @@ wss.on("connection", (ws) => {
             rooms.get(roomCode).add(ws);
             ws.room = roomCode;
             ws.name = name;
+            ws.score = 0;
 
             console.log(`Client joined room ${roomCode}`);
 
@@ -50,11 +50,31 @@ wss.on("connection", (ws) => {
             });
         }
 
+        if (msg.type == "start-game") {
+            const roomCode = ws.room;
+
+            if (!rooms.has(roomCode)) {
+                console.log("Room does not exist");
+            }
+
+            if (rooms.get(roomCode).size < 2) {
+                broadcastToRoom(roomCode, {
+                    type: "room-size",
+                    message: "Not enough players to start game :(",
+                    count: rooms.get(roomCode).size
+                });
+                console.log("Not enough players");
+                return;
+            }
+
+            console.log(`Starting game in room ${roomCode}`);
+            startGame(roomCode);
+        }
+
         ws.send("Server received: " + data.toString());
     });
 
     ws.on("close", () => {
-        // console.log("Client Disconnected");
         if (ws.room) {
             const roomSet = rooms.get(ws.room);
             if (roomSet) {
@@ -77,7 +97,7 @@ wss.on("connection", (ws) => {
 });
 
 function broadcastToRoom(room, obj) {
-    const roomSet =rooms.get(room);
+    const roomSet = rooms.get(room);
     if (!roomSet) {
         return;
     }
@@ -86,6 +106,16 @@ function broadcastToRoom(room, obj) {
     for (const client of roomSet) {
         client.send(json);
     }
+}
+
+function startGame(room) {
+    console.log(`Game has started in room ${room}`);
+    broadcastToRoom(room, {
+        type: "game-started",
+        message: "Game has started!"
+    });
+
+    //TO DO: Game Logic
 }
 
 server.listen(3000, () => {

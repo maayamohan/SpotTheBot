@@ -3,15 +3,15 @@ import WebSocket from "ws";
 const ws = new WebSocket("ws://localhost:3000");
 
 ws.on("open", () => {
-    console.log("Connected!");
+    console.log("Connected as Player1!");
 
     ws.send(JSON.stringify({
         type: "join-room",
-        name: "Alice",
-        room: "ABCD"
+        room: "ABC123",
+        name: "Player1"
     }));
 });
 
-ws.on("message", (data) => {
-    console.log("Server says:", data.toString());
+ws.on("message", (msg) => {
+    console.log("FROM SERVER:", msg.toString());
 });
