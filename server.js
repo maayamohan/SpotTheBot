@@ -32,6 +32,11 @@ wss.on("connection", (ws) => {
             const roomCode = msg.room;
             const name = msg.name;
 
+            if (!roomCode || roomCode.length != 6) {
+                console.log("Invalid room code");
+                return;
+            }
+
             if (!rooms.has(roomCode)) {
                 rooms.set(roomCode, new Set());
             }
