@@ -1,6 +1,6 @@
 import express from "express";
 import http from "http";
-import { WebSocketServer, WebSocket } from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 
 const app = express();
 const server = http.createServer(app);
@@ -28,93 +28,24 @@ wss.on("connection", (ws) => {
             return;
         }
 
-        if (msg.type == "create-room") {
-            const name = msg.name;
-            let temp = Math.random().toString(36).substring(2, 8).toUpperCase();
+        switch (msg.type) {
 
-            while (rooms.has(temp)) {
-                temp = Math.random().toString(36).substring(2, 8).toUpperCase();
-            }
-
-            const roomCode = temp;
-
-            rooms.set(roomCode, new Set());
-            rooms.get(roomCode).add(ws);
-
-            ws.room = roomCode;
-            ws.name = name;
-            ws.score = 0;
-            ws.isHost = true;
-
-            console.log(`${name} created room ${roomCode}`);
-
-            ws.send(JSON.stringify ({
-                type: "room-created",
-                room: roomCode
-            }));
-
-            return;
+            case "create-room":
+                handleCreateRoom(ws, msg);
+                break;
+            
+            case "join-room":
+                handleJoinRoom(ws, msg);
+                break;
+            
+            case "start-game":
+                handleStartGame(ws);
+                break;
+            
+            default:
+                ws.send(JSON.stringify({ error: "Unknown message type "}));
+                console.log(`Unknown message type: ${msg.type}`);
         }
-
-        if (msg.type == "join-room") {
-            const roomCode = msg.room;
-            const name = msg.name;
-
-            if (!roomCode || roomCode.length != 6) {
-                ws.send(JSON.stringify({ error: "Invalid room code" }));
-                console.log("Invalid room code");
-                return;
-            }
-
-            if (!rooms.has(roomCode)) {
-                ws.send(JSON.stringify({ error: "Room does not exist"}));
-                console.log("Room does not exist");
-                return;
-            }
-
-            rooms.get(roomCode).add(ws);
-            ws.room = roomCode;
-            ws.name = name;
-            ws.score = 0;
-            ws.isHost = false;
-
-            console.log(`Client joined room ${roomCode}`);
-
-            broadcastToRoom(roomCode, {
-                type: "room-update",
-                message: `${name} has joined!`,
-                count: rooms.get(roomCode).size
-            });
-
-            return;
-        }
-
-        if (msg.type == "start-game") {
-            const roomCode = ws.room;
-
-            if (!rooms.has(roomCode)) {
-                console.log("Room does not exist");
-                return;
-            }
-
-            if (!ws.isHost) {
-                ws.send(JSON.stringify({ error: "Only host can start game"}));
-                console.log("Only host can start game");
-                return;
-            }
-
-            if (rooms.get(roomCode).size < 2) {
-                ws.send(JSON.stringify({ error: "Not enough players to start game"}));
-                console.log("Not enough players to start game");
-                return;
-            }
-
-            console.log(`Starting game in room ${roomCode}`);
-            startGame(roomCode);
-
-            return;
-        }
-
     });
 
     ws.on("close", () => {
@@ -161,6 +92,88 @@ function startGame(room) {
     });
 
     //TO DO: Game Logic
+}
+
+function handleCreateRoom(ws, msg) {
+    const name = msg.name;
+    let temp = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    while (rooms.has(temp)) {
+        temp = Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    const roomCode = temp;
+
+    rooms.set(roomCode, new Set());
+    rooms.get(roomCode).add(ws);
+
+    ws.room = roomCode;
+    ws.name = name;
+    ws.score = 0;
+    ws.isHost = true;
+
+    console.log(`${name} created room ${roomCode}`);
+
+    ws.send(JSON.stringify ({
+        type: "room-created",
+        room: roomCode
+    }));
+
+}
+
+function handleJoinRoom(ws, msg) {
+    const roomCode = msg.room;
+    const name = msg.name;
+
+    if (!roomCode || roomCode.length != 6) {
+        ws.send(JSON.stringify({ error: "Invalid room code" }));
+        console.log("Invalid room code");
+        return;
+    }
+
+    if (!rooms.has(roomCode)) {
+        ws.send(JSON.stringify({ error: "Room does not exist"}));
+        console.log("Room does not exist");
+        return;
+    }
+
+    rooms.get(roomCode).add(ws);
+    ws.room = roomCode;
+    ws.name = name;
+    ws.score = 0;
+    ws.isHost = false;
+
+    console.log(`Client joined room ${roomCode}`);
+
+    broadcastToRoom(roomCode, {
+        type: "room-update",
+        message: `${name} has joined!`,
+        count: rooms.get(roomCode).size
+    });
+}
+
+function handleStartGame(ws) {
+    const roomCode = ws.room;
+
+    if (!rooms.has(roomCode)) {
+        console.log("Room does not exist");
+        return;
+    }
+
+    if (!ws.isHost) {
+        ws.send(JSON.stringify({ error: "Only host can start game"}));
+        console.log("Only host can start game");
+        return;
+    }
+
+    if (rooms.get(roomCode).size < 2) {
+        ws.send(JSON.stringify({ error: "Not enough players to start game"}));
+        console.log("Not enough players to start game");
+        return;
+    }
+
+    console.log(`Starting game in room ${roomCode}`);
+    startGame(roomCode);
 }
 
 server.listen(3000, () => {
