@@ -104,7 +104,9 @@ function broadcastToRoom(room, obj) {
     const json = JSON.stringify(obj);
 
     for (const client of roomSet) {
-        client.send(json);
+        if (client.readyState === client.OPEN) {
+            client.send(json);
+        }
     }
 }
 
